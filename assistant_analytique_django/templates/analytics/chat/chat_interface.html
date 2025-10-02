@@ -1,0 +1,286 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ session.title }} - Chat Analytique{% endblock %}
+
+{% block extra_css %}
+<style>
+.chat-container {
+    height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #f8f9fa;
+    max-height: 60vh;
+}
+
+.message {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: flex-start;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.message.user {
+    flex-direction: row-reverse;
+}
+
+.message-content {
+    max-width: 70%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    position: relative;
+}
+
+.message.user .message-content {
+    background: #007bff;
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.message.assistant .message-content {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-bottom-left-radius: 0.25rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.message.user .message-avatar {
+    background: #007bff;
+    color: white;
+}
+
+.message.assistant .message-avatar {
+    background: #28a745;
+    color: white;
+}
+
+.chat-input {
+    padding: 1rem;
+    background: white;
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.send-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #667eea;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.send-btn:hover {
+    background: #5a67d8;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.sidebar {
+    background: white;
+    border-left: 1px solid #e9ecef;
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.suggestion-item:hover {
+    background: #667eea;
+    color: white;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <!-- Zone de chat principale -->
+        <div class="col-lg-9">
+            <div class="chat-container">
+                <!-- En-tête du chat -->
+                <div class="chat-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">{{ session.title }}</h5>
+                            <small class="opacity-75">
+                                {% if session.dataset %}
+                                    <i class="fas fa-database me-1"></i>{{ session.dataset.name }}
+                                {% else %}
+                                    <i class="fas fa-comment-alt me-1"></i>Conversation générale
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div>
+                            <a href="/chat/" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Messages -->
+                <div class="chat-messages" id="chatMessages">
+                    {% for message in messages %}
+                        <div class="message {{ message.role }}">
+                            <div class="message-avatar">
+                                {% if message.role == 'user' %}
+                                    <i class="fas fa-user"></i>
+                                {% else %}
+                                    <i class="fas fa-robot"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="message-content">
+                                <div class="message-text">{{ message.content|linebreaks }}</div>
+                                <small class="text-muted d-block mt-2">{{ message.created_at|date:"H:i" }}</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Zone de saisie -->
+                <div class="chat-input">
+                    <form id="chatForm">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <textarea 
+                                id="messageInput" 
+                                class="form-control" 
+                                placeholder="Posez votre question sur les données..."
+                                rows="2"
+                                style="padding-right: 60px; border-radius: 25px;"
+                            ></textarea>
+                            <button type="submit" class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="sidebar p-3">
+                <!-- Informations sur le dataset -->
+                {% if session.dataset %}
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-database me-2"></i>Dataset Actuel</h6>
+                        <div><strong>{{ session.dataset.name }}</strong></div>
+                        {% if dataset_info %}
+                            <small>📊 {{ dataset_info.shape.0 }} lignes × {{ dataset_info.shape.1 }} colonnes</small>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-info-circle me-2"></i>Aucun dataset</h6>
+                        <p class="small mb-0">Sélectionnez un dataset pour commencer l'analyse</p>
+                    </div>
+                {% endif %}
+                
+                <!-- Suggestions d'analyse -->
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb me-2"></i>Suggestions</h6>
+                    {% for suggestion in analysis_suggestions %}
+                        <div class="suggestion-item" onclick="useSuggestion('{{ suggestion }}')">
+                            {{ suggestion }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const sessionId = '{{ session.id }}';
+
+document.getElementById('chatForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message) return;
+    
+    // Ajouter le message utilisateur
+    addMessage('user', message);
+    messageInput.value = '';
+    
+    // Simuler une réponse de l'assistant (temporaire)
+    setTimeout(() => {
+        addMessage('assistant', "Merci pour votre message. L'intégration avec l'IA OpenAI sera ajoutée prochainement. En attendant, je peux vous aider avec des questions générales sur l'analyse de données.");
+    }, 1000);
+});
+
+function addMessage(role, content) {
+    const messagesContainer = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${role}`;
+    
+    const avatar = role === 'user' ? 'fa-user' : 'fa-robot';
+    const bgColor = role === 'user' ? '#007bff' : '#28a745';
+    
+    messageDiv.innerHTML = `
+        <div class="message-avatar" style="background: ${bgColor}; color: white;">
+            <i class="fas ${avatar}"></i>
+        </div>
+        <div class="message-content">
+            <div class="message-text">${content}</div>
+            <small class="text-muted d-block mt-2">${new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</small>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function useSuggestion(suggestion) {
+    document.getElementById('messageInput').value = suggestion;
+}
+</script>
+{% endblock %}

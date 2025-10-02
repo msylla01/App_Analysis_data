@@ -15,22 +15,28 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-
-from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from analytics.views import DashboardView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/auth/', include('users.urls')),
-    path('api/analytics/', include('analytics.urls')),
-    path('api/upload/', include('data_upload.urls')),
-    path('api/viz/', include('visualizations.urls')),
-    path('', include('analytics.urls')),  # Page d'accueil
+    
+    # APIs
+    path('api/auth/', include('users.urls')),  # Gardé 'users' car c'est votre app existante
+    path('api/analytics/', include('analytics.urls')),  # API analytics
+    path('api/upload/', include('data_upload.urls')),  # Gardé 'data_upload' 
+    path('api/viz/', include('visualizations.urls')),  # Gardé 'visualizations'
+    
+    # Dashboard principal
+    path('', DashboardView.as_view(), name='dashboard'),
+    
+    # TOUTES les routes analytics (y compris le chat)
+    path('', include('analytics.urls')),  # ← Ici, nous incluons analytics.urls à la racine
 ]
 
+# Servir les fichiers média et statiques en développement
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

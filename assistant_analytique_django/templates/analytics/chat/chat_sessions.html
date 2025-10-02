@@ -1,0 +1,158 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Mes Conversations - Assistant Analytique{% endblock %}
+
+{% block extra_css %}
+<style>
+.session-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #007bff;
+}
+
+.session-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.session-meta {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 1rem;
+}
+
+.new-chat-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 50px;
+    padding: 1rem 2rem;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.new-chat-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-comments me-2"></i>Mes Conversations</h2>
+            <p class="text-muted">Analysez vos données en langage naturel avec l'IA</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="/chat/create/" class="btn new-chat-btn">
+                <i class="fas fa-plus me-2"></i>Nouvelle Conversation
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card p-3 text-center">
+                <h3>{{ stats.total_sessions }}</h3>
+                <p class="mb-0">Conversations</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card p-3 text-center">
+                <h3>{{ stats.total_messages }}</h3>
+                <p class="mb-0">Messages</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card p-3 text-center">
+                <h3>{{ stats.total_analyses }}</h3>
+                <p class="mb-0">Analyses</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card p-3 text-center">
+                <h3>{{ stats.active_sessions }}</h3>
+                <p class="mb-0">Actives</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liste des sessions -->
+    {% if sessions %}
+        <div class="row">
+            {% for session in sessions %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card session-card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span class="badge bg-{% if session.is_active %}success{% else %}secondary{% endif %}">
+                                {% if session.is_active %}Active{% else %}Archivée{% endif %}
+                            </span>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="/chat/{{ session.id }}/"><i class="fas fa-eye me-2"></i>Ouvrir</a></li>
+                                    <li><a class="dropdown-item" href="/chat/{{ session.id }}/export/?format=txt"><i class="fas fa-download me-2"></i>Exporter</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="/chat/{{ session.id }}/delete/"><i class="fas fa-trash me-2"></i>Supprimer</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <h6 class="card-title">{{ session.title }}</h6>
+                            
+                            {% if session.dataset %}
+                                <div class="mb-2">
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-database me-1"></i>{{ session.dataset.name }}
+                                    </span>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="session-meta">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="fas fa-message me-1"></i>{{ session.message_count }} messages</span>
+                                    <span><i class="fas fa-chart-line me-1"></i>{{ session.analysis_count }} analyses</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Créée: {{ session.created_at|date:"d/m/Y" }}</span>
+                                    {% if session.last_message_time %}
+                                        <span>MAJ: {{ session.last_message_time|timesince }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer">
+                            <a href="/chat/{{ session.id }}/" class="btn btn-primary w-100">
+                                <i class="fas fa-comments me-1"></i>Continuer la conversation
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- État vide -->
+        <div class="text-center py-5">
+            <i class="fas fa-comments fa-4x text-muted mb-4"></i>
+            <h4>Aucune conversation</h4>
+            <p class="text-muted mb-4">Commencez votre première conversation avec l'assistant IA</p>
+            <a href="/chat/create/" class="btn new-chat-btn">
+                <i class="fas fa-plus me-2"></i>Nouvelle Conversation
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

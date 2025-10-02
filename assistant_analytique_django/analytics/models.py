@@ -1,10 +1,7 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from django.contrib.auth import get_user_model
 import json
-
+import uuid
 User = get_user_model()
 
 class Dataset(models.Model):
@@ -173,3 +170,167 @@ class Visualization(models.Model):
     def can_edit(self, user):
         """Vérifier si l'utilisateur peut modifier cette visualisation"""
         return self.analysis.owner == user
+    
+
+
+class ChatSession(models.Model):
+    """Session de chat pour l'analyse de données"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200, default="Nouvelle conversation")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_sessions')
+    
+    # Dataset associé à la session
+    dataset = models.ForeignKey('Dataset', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Métadonnées de la session
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Configuration de l'IA
+    model_used = models.CharField(max_length=50, default='gpt-4-turbo-preview')
+    system_prompt = models.TextField(default="Vous êtes un assistant expert en analyse de données.")
+    
+    # Statistiques
+    message_count = models.PositiveIntegerField(default=0)
+    analysis_count = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = "Session de Chat"
+        verbose_name_plural = "Sessions de Chat"
+    
+    def __str__(self):
+        return f"{self.title} - {self.owner.username}"
+    
+    def get_last_messages(self, count=10):
+        """Récupérer les derniers messages de la conversation"""
+        return self.messages.order_by('-created_at')[:count]
+    
+    def update_title_from_first_message(self):
+        """Mettre à jour le titre basé sur le premier message"""
+        first_message = self.messages.filter(role='user').first()
+        if first_message and self.title == "Nouvelle conversation":
+            # Prendre les 50 premiers caractères du message
+            new_title = first_message.content[:50]
+            if len(first_message.content) > 50:
+                new_title += "..."
+            self.title = new_title
+            self.save(update_fields=['title'])
+
+class ChatMessage(models.Model):
+    """Message dans une session de chat"""
+    ROLE_CHOICES = [
+        ('user', 'Utilisateur'),
+        ('assistant', 'Assistant'),
+        ('system', 'Système'),
+        ('function', 'Fonction'),
+    ]
+    
+    MESSAGE_TYPES = [
+        ('text', 'Texte'),
+        ('analysis', 'Analyse'),
+        ('visualization', 'Visualisation'),
+        ('code', 'Code'),
+        ('error', 'Erreur'),
+        ('data_summary', 'Résumé de données'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='messages')
+    
+    # Contenu du message
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    content = models.TextField()
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='text')
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    tokens_used = models.PositiveIntegerField(default=0)
+    
+    # Données structurées (pour les analyses, visualisations, etc.)
+    structured_data = models.JSONField(default=dict, blank=True)
+    
+    # Relations avec d'autres objets
+    related_analysis = models.ForeignKey('Analysis', on_delete=models.SET_NULL, null=True, blank=True)
+    related_visualization = models.ForeignKey('Visualization', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Feedback utilisateur
+    is_helpful = models.BooleanField(null=True, blank=True)
+    user_feedback = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = "Message de Chat"
+        verbose_name_plural = "Messages de Chat"
+    
+    def __str__(self):
+        return f"{self.get_role_display()}: {self.content[:50]}..."
+    
+    def is_from_user(self):
+        return self.role == 'user'
+    
+    def is_from_assistant(self):
+        return self.role == 'assistant'
+
+class DataAnalysisQuery(models.Model):
+    """Requête d'analyse de données générée par l'IA"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    message = models.ForeignKey(ChatMessage, on_delete=models.CASCADE, related_name='analysis_queries')
+    
+    # Query details
+    query_text = models.TextField()  # Question originale de l'utilisateur
+    analysis_type = models.CharField(max_length=50)  # Type d'analyse déterminé par l'IA
+    
+    # Code Python généré
+    python_code = models.TextField()
+    
+    # Résultats
+    execution_status = models.CharField(max_length=20, default='pending')  # pending, success, error
+    results = models.JSONField(default=dict, blank=True)
+    error_message = models.TextField(blank=True)
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    execution_time = models.FloatField(null=True, blank=True)  # Temps d'exécution en secondes
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Query: {self.query_text[:50]}..."
+
+class ChatAnalyticsPreset(models.Model):
+    """Presets d'analyses prédéfinies pour le chat"""
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    prompt_template = models.TextField()
+    
+    # Catégorie
+    category = models.CharField(max_length=50, choices=[
+        ('descriptive', 'Statistiques descriptives'),
+        ('correlation', 'Analyse de corrélation'),
+        ('regression', 'Régression'),
+        ('classification', 'Classification'),
+        ('clustering', 'Clustering'),
+        ('timeseries', 'Séries temporelles'),
+        ('visualization', 'Visualisation'),
+        ('custom', 'Personnalisé'),
+    ])
+    
+    # Configuration
+    requires_target_column = models.BooleanField(default=False)
+    requires_feature_columns = models.BooleanField(default=False)
+    min_numeric_columns = models.PositiveIntegerField(default=0)
+    min_categorical_columns = models.PositiveIntegerField(default=0)
+    
+    # Métadonnées
+    is_active = models.BooleanField(default=True)
+    usage_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['category', 'name']
+    
+    def __str__(self):
+        return f"{self.get_category_display()}: {self.name}"

@@ -1,0 +1,103 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Nouvelle Conversation - Assistant Analytique{% endblock %}
+
+{% block extra_css %}
+<style>
+.create-chat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    border: 2px solid #e9ecef;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-create {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="create-chat-card card-header text-center py-4">
+                    <h3><i class="fas fa-robot me-2"></i>Nouvelle Conversation avec l'IA</h3>
+                    <p class="mb-0 opacity-75">Créez une session pour analyser vos données en langage naturel</p>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-comment-alt me-2"></i>Titre de la conversation
+                            </label>
+                            <input type="text" name="title" class="form-control" 
+                                   placeholder="Ex: Analyse des ventes Q3 (optionnel - sera généré automatiquement)">
+                            <div class="form-text">Le titre sera automatiquement généré à partir de votre première question si vous le laissez vide</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-database me-2"></i>Dataset à analyser
+                            </label>
+                            <select name="dataset" class="form-select">
+                                <option value="">Sélectionner plus tard pendant la conversation</option>
+                                {% for dataset in available_datasets %}
+                                    <option value="{{ dataset.id }}">
+                                        {{ dataset.name }} ({{ dataset.get_dataset_type_display }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Vous pouvez changer ou sélectionner un dataset à tout moment pendant la conversation</div>
+                        </div>
+                        
+                        <div class="alert alert-info border-0">
+                            <h6><i class="fas fa-lightbulb me-2"></i>Conseils pour bien commencer</h6>
+                            <ul class="mb-0">
+                                <li><strong>Posez des questions naturelles :</strong> "Montre-moi les corrélations dans mes données"</li>
+                                <li><strong>Demandez des analyses :</strong> "Quelles sont les variables les plus importantes ?"</li>
+                                <li><strong>Créez des visualisations :</strong> "Fais un graphique des ventes par mois"</li>
+                                <li><strong>Explorez vos données :</strong> "Y a-t-il des valeurs aberrantes ?"</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="/chat/" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-arrow-left me-1"></i>Retour
+                            </a>
+                            <button type="submit" class="btn btn-create text-white">
+                                <i class="fas fa-rocket me-1"></i>Commencer la conversation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

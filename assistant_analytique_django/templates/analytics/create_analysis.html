@@ -1,0 +1,298 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Nouvelle Analyse - {{ dataset.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/datasets/">Datasets</a></li>
+            <li class="breadcrumb-item"><a href="/datasets/{{ dataset.pk }}/">{{ dataset.name }}</a></li>
+            <li class="breadcrumb-item active">Nouvelle analyse</li>
+        </ol>
+    </nav>
+    
+    <!-- Alerte sur la qualité des données -->
+    {% if total_missing > 0 %}
+    <div class="alert alert-warning">
+        <h6><i class="fas fa-exclamation-triangle me-2"></i>Attention - Données manquantes détectées</h6>
+        <p>Ce dataset contient <strong>{{ total_missing }}</strong> valeurs manquantes ({{ missing_percentage }}% du total).</p>
+        <small>Cela peut affecter la qualité de vos analyses. Considérez nettoyer vos données avant de procéder.</small>
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h4><i class="fas fa-chart-line me-2"></i>Créer une nouvelle analyse</h4>
+                    <p class="mb-0 opacity-75">Dataset : <strong>{{ dataset.name }}</strong></p>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="analysisForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Titre de l'analyse *
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger small">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.analysis_type.id_for_label }}" class="form-label">
+                                <i class="fas fa-chart-bar me-1"></i>Type d'analyse *
+                            </label>
+                            {{ form.analysis_type }}
+                            {% if form.analysis_type.errors %}
+                                <div class="text-danger small">{{ form.analysis_type.errors }}</div>
+                            {% endif %}
+                            
+                            <!-- Indicateurs de compatibilité -->
+                            {% if compatibility %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Compatibilité avec votre dataset :</small>
+                                    <div class="d-flex flex-wrap gap-2 mt-1">
+                                        {% for analysis_type, validation in compatibility.items %}
+                                            <span class="badge bg-{% if validation.is_valid %}success{% else %}danger{% endif %}" 
+                                                  title="{% for error in validation.errors %}{{ error }}{% endfor %}">
+                                                {{ analysis_type|title }}
+                                                {% if validation.is_valid %}
+                                                    <i class="fas fa-check"></i>
+                                                {% else %}
+                                                    <i class="fas fa-times"></i>
+                                                {% endif %}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Paramètres spécifiques à la régression -->
+                        <div id="regressionParams" class="mb-4" style="display: none;">
+                            <h6><i class="fas fa-cogs me-2"></i>Paramètres de régression</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="{{ form.target_column.id_for_label }}" class="form-label">
+                                        Colonne cible *
+                                    </label>
+                                    {{ form.target_column }}
+                                    {% if form.target_column.errors %}
+                                        <div class="text-danger small">{{ form.target_column.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.feature_columns.id_for_label }}" class="form-label">
+                                        Colonnes explicatives *
+                                    </label>
+                                    {{ form.feature_columns }}
+                                    {% if form.feature_columns.errors %}
+                                        <div class="text-danger small">{{ form.feature_columns.errors }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Maintenez Ctrl pour sélectionner plusieurs colonnes</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Paramètres spécifiques au clustering -->
+                        <div id="clusteringParams" class="mb-4" style="display: none;">
+                            <h6><i class="fas fa-cogs me-2"></i>Paramètres de clustering</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="{{ form.n_clusters.id_for_label }}" class="form-label">
+                                        Nombre de clusters
+                                    </label>
+                                    {{ form.n_clusters }}
+                                    {% if form.n_clusters.errors %}
+                                        <div class="text-danger small">{{ form.n_clusters.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Paramètres spécifiques aux séries temporelles -->
+                        <div id="timeseriesParams" class="mb-4" style="display: none;">
+                            <h6><i class="fas fa-cogs me-2"></i>Paramètres de série temporelle</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="{{ form.date_column.id_for_label }}" class="form-label">
+                                        Colonne de date *
+                                    </label>
+                                    {{ form.date_column }}
+                                    {% if form.date_column.errors %}
+                                        <div class="text-danger small">{{ form.date_column.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.value_column.id_for_label }}" class="form-label">
+                                        Colonne de valeur *
+                                    </label>
+                                    {{ form.value_column }}
+                                    {% if form.value_column.errors %}
+                                        <div class="text-danger small">{{ form.value_column.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Erreurs de validation générale -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="/datasets/{{ dataset.pk }}/" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="fas fa-play me-1"></i>Lancer l'analyse
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar avec informations du dataset -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-info-circle me-2"></i>Informations du dataset</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Dimensions :</strong><br>
+                        <span class="text-muted">{{ dataset.rows_count|default:"?" }} lignes × {{ dataset.columns_count|default:"?" }} colonnes</span>
+                    </div>
+                    
+                    {% if total_missing > 0 %}
+                    <div class="mb-3">
+                        <strong>Qualité des données :</strong><br>
+                        <span class="text-warning">{{ missing_percentage }}% de valeurs manquantes</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if numeric_columns %}
+                    <div class="mb-3">
+                        <strong>Colonnes numériques ({{ numeric_columns|length }}) :</strong><br>
+                        <div class="mt-1">
+                            {% for col in numeric_columns %}
+                                <span class="badge bg-success me-1 mb-1">{{ col|truncatechars:15 }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if categorical_columns %}
+                    <div class="mb-3">
+                        <strong>Colonnes catégorielles ({{ categorical_columns|length }}) :</strong><br>
+                        <div class="mt-1">
+                            {% for col in categorical_columns %}
+                                <span class="badge bg-info me-1 mb-1">{{ col|truncatechars:15 }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if date_columns %}
+                    <div class="mb-3">
+                        <strong>Colonnes de date potentielles :</strong><br>
+                        <div class="mt-1">
+                            {% for col in date_columns %}
+                                <span class="badge bg-warning me-1 mb-1">{{ col|truncatechars:15 }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Recommandations -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6><i class="fas fa-lightbulb me-2"></i>Recommandations</h6>
+                </div>
+                <div class="card-body">
+                    {% if missing_percentage > 30 %}
+                    <div class="alert alert-warning">
+                        <strong>Nettoyage recommandé :</strong> Votre dataset a beaucoup de valeurs manquantes. Considérez les nettoyer avant l'analyse.
+                    </div>
+                    {% endif %}
+                    
+                    {% if numeric_columns|length >= 2 %}
+                    <div class="alert alert-success">
+                        <strong>Analyse de corrélation :</strong> Recommandée avec {{ numeric_columns|length }} colonnes numériques.
+                    </div>
+                    {% endif %}
+                    
+                    {% if numeric_columns|length < 2 %}
+                    <div class="alert alert-info">
+                        <strong>Analyse descriptive :</strong> La plus appropriée pour votre dataset.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const analysisTypeSelect = document.getElementById('{{ form.analysis_type.id_for_label }}');
+    const regressionParams = document.getElementById('regressionParams');
+    const clusteringParams = document.getElementById('clusteringParams');
+    const timeseriesParams = document.getElementById('timeseriesParams');
+    
+    function toggleParameters() {
+        const selectedType = analysisTypeSelect.value;
+        
+        // Masquer tous les paramètres
+        regressionParams.style.display = 'none';
+        clusteringParams.style.display = 'none';
+        timeseriesParams.style.display = 'none';
+        
+        // Afficher les paramètres appropriés
+        if (selectedType === 'regression') {
+            regressionParams.style.display = 'block';
+        } else if (selectedType === 'clustering') {
+            clusteringParams.style.display = 'block';
+        } else if (selectedType === 'timeseries') {
+            timeseriesParams.style.display = 'block';
+        }
+    }
+    
+    // Écouter les changements de type d'analyse
+    analysisTypeSelect.addEventListener('change', toggleParameters);
+    
+    // Initialiser l'affichage
+    toggleParameters();
+    
+    // Gérer la soumission du formulaire
+    document.getElementById('analysisForm').addEventListener('submit', function() {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Analyse en cours...';
+    });
+});
+</script>
+{% endblock %}

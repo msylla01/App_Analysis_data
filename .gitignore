@@ -1,0 +1,119 @@
+
+## **📄 .gitignore**
+
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+static_collected/
+media/uploads/
+media/datasets/
+media/avatars/
+
+# Environments
+.env
+.env.*
+.venv
+env/
+venv/
+venv_django/
+ENV/
+env.bak/
+venv.bak/
+
+# Database
+*.sqlite3
+*.db
+*.database
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Cache
+.cache/
+.sass-cache/
+node_modules/
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+*.json
+!fixtures/*.json
+!static/data/*.json
+
+# Outputs
+outputs/
+results/
+exports/
+
+# Tests
+htmlcov/
+.coverage
+coverage.xml
+.pytest_cache/
+
+# Temp files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# SSL
+*.pem
+*.crt
+*.key
+
+# Local dev
+local/
+local_settings/
+scripts/local/
+
+# Dependencies
+Pipfile.lock
+poetry.lock
+
+# Documentation
+docs/_build/

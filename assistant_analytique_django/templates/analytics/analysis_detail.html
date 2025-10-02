@@ -1,0 +1,200 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ analysis.title }} - Assistant Analytique Génie{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/analyses/">Analyses</a></li>
+            <li class="breadcrumb-item active">{{ analysis.title }}</li>
+        </ol>
+    </nav>
+    
+    <!-- En-tête de l'analyse -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-2">
+                <span class="badge bg-{% if analysis.status == 'completed' %}success{% elif analysis.status == 'failed' %}danger{% elif analysis.status == 'running' %}warning{% else %}secondary{% endif %} me-2">
+                    {{ analysis.get_status_display }}
+                </span>
+                <span class="badge bg-info me-2">
+                    {{ analysis.get_analysis_type_display }}
+                </span>
+                <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>{{ analysis.created_at|date:"d/m/Y H:i" }}
+                </small>
+            </div>
+            <h2>{{ analysis.title }}</h2>
+            <p class="text-muted">{{ analysis.description|default:"Aucune description" }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="/datasets/{{ analysis.dataset.pk }}/" class="btn btn-outline-primary">
+                <i class="fas fa-database me-1"></i>Voir le dataset
+            </a>
+            {% if visualizations %}
+                <a href="/visualizations/" class="btn btn-success ms-2">
+                    <i class="fas fa-chart-pie me-1"></i>{{ visualizations.count }} Graphique{{ visualizations.count|pluralize }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Visualisations -->
+    {% if visualizations %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie me-2"></i>Visualisations ({{ visualizations.count }})</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for viz in visualizations %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">{{ viz.title }}</h6>
+                                        <small class="text-muted">{{ viz.get_chart_type_display }}</small>
+                                    </div>
+                                    <div class="card-body">
+                                        <div style="height: 300px; position: relative;">
+                                            {% if viz.chart_config.library == 'plotly' %}
+                                                <div id="plotly_{{ viz.id }}" style="width: 100%; height: 100%;"></div>
+                                            {% else %}
+                                                <canvas id="chart_{{ viz.id }}" width="100%" height="300"></canvas>
+                                            {% endif %}
+                                        </div>
+                                        <p class="small text-muted mt-2">{{ viz.description }}</p>
+                                    </div>
+                                    <div class="card-footer">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="downloadChart('{{ viz.id }}')">
+                                            <i class="fas fa-download me-1"></i>Télécharger
+                                        </button>
+                                        <a href="/visualizations/{{ viz.pk }}/" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-expand me-1"></i>Agrandir
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Résultats de l'analyse -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar me-2"></i>Résultats de l'analyse</h5>
+                </div>
+                <div class="card-body">
+                    {% if analysis.status == 'completed' and analysis.results %}
+                        <!-- Affichage des résultats selon le type d'analyse -->
+                        {% if analysis.analysis_type == 'descriptive' %}
+                            {% include 'analytics/results/descriptive.html' %}
+                        {% elif analysis.analysis_type == 'correlation' %}
+                            {% include 'analytics/results/correlation.html' %}
+                        {% else %}
+                            <!-- Affichage générique des résultats JSON -->
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle me-1"></i>Résultats de l'analyse</h6>
+                                <pre class="bg-light p-3 rounded"><code>{{ results_json|default:"Aucun résultat disponible" }}</code></pre>
+                            </div>
+                        {% endif %}
+                    {% elif analysis.status == 'running' %}
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                            <p class="mt-3">Analyse en cours...</p>
+                            <small class="text-muted">Cette page se rafraîchira automatiquement...</small>
+                        </div>
+                        <!-- Auto-refresh pour les analyses en cours -->
+                        <script>
+                            setTimeout(function() {
+                                location.reload();
+                            }, 5000); // Refresh toutes les 5 secondes
+                        </script>
+                    {% elif analysis.status == 'failed' %}
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-exclamation-triangle me-1"></i>Erreur lors de l'analyse</h6>
+                            <p>{{ analysis.results.error|default:"Une erreur inconnue s'est produite." }}</p>
+                            <hr>
+                            <div class="d-flex gap-2">
+                                <a href="/datasets/{{ analysis.dataset.pk }}/analyze/" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-redo me-1"></i>Créer une nouvelle analyse
+                                </a>
+                                <a href="/datasets/{{ analysis.dataset.pk }}/" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-database me-1"></i>Vérifier le dataset
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-clock me-1"></i>Analyse en attente</h6>
+                            <p>L'analyse n'a pas encore été exécutée.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% for viz in visualizations %}
+        try {
+            {% if viz.chart_config.library == 'plotly' %}
+                // Graphique Plotly
+                const plotlyData{{ viz.id }} = {{ viz.chart_data|safe }};
+                Plotly.newPlot('plotly_{{ viz.id }}', plotlyData{{ viz.id }}.data, plotlyData{{ viz.id }}.layout, {responsive: true});
+            {% else %}
+                // Graphique Chart.js
+                const ctx{{ viz.id }} = document.getElementById('chart_{{ viz.id }}').getContext('2d');
+                const data{{ viz.id }} = {{ viz.chart_data|safe }};
+                const config{{ viz.id }} = {{ viz.chart_config|safe }};
+                
+                new Chart(ctx{{ viz.id }}, {
+                    type: config{{ viz.id }}.type,
+                    data: data{{ viz.id }},
+                    options: config{{ viz.id }}.options
+                });
+            {% endif %}
+        } catch(e) {
+            console.error('Erreur lors de la création du graphique {{ viz.id }}:', e);
+            document.getElementById('{% if viz.chart_config.library == "plotly" %}plotly_{{ viz.id }}{% else %}chart_{{ viz.id }}{% endif %}').innerHTML = 
+                '<div class="alert alert-warning">Erreur lors du chargement du graphique</div>';
+        }
+    {% endfor %}
+});
+
+function downloadChart(vizId) {
+    try {
+        const canvas = document.getElementById('chart_' + vizId);
+        if (canvas) {
+            const link = document.createElement('a');
+            link.download = 'visualization_' + vizId + '.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    } catch(e) {
+        alert('Erreur lors du téléchargement');
+    }
+}
+</script>
+{% endblock %}

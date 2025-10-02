@@ -1,0 +1,158 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Upload Dataset - Assistant Analytique Génie{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-upload me-2"></i>Uploader un nouveau dataset</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Informations sur les formats supportés -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-1"></i>Formats supportés :</h6>
+                        <ul class="mb-0">
+                            <li><strong>CSV</strong> : Fichiers séparés par virgules (.csv)</li>
+                            <li><strong>Excel</strong> : Fichiers Microsoft Excel (.xlsx, .xls)</li>
+                            <li><strong>JSON</strong> : Fichiers JavaScript Object Notation (.json)</li>
+                        </ul>
+                    </div>
+                    
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Nom du dataset *
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small">{{ form.name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.dataset_type.id_for_label }}" class="form-label">
+                                <i class="fas fa-file-alt me-1"></i>Type de fichier *
+                            </label>
+                            {{ form.dataset_type }}
+                            {% if form.dataset_type.errors %}
+                                <div class="text-danger small">{{ form.dataset_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.file_path.id_for_label }}" class="form-label">
+                                <i class="fas fa-file me-1"></i>Fichier *
+                            </label>
+                            {{ form.file_path }}
+                            {% if form.file_path.errors %}
+                                <div class="text-danger small">{{ form.file_path.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Taille maximale : 100 MB</div>
+                            
+                            <!-- Barre de progression -->
+                            <div class="progress mt-2" id="uploadProgress" style="display: none;">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.is_public }}
+                            <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+                                <i class="fas fa-globe me-1"></i>Rendre ce dataset public
+                            </label>
+                            <div class="form-text">Les datasets publics peuvent être vus par tous les utilisateurs.</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'analytics:datasets' %}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-upload me-1"></i>Uploader le dataset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Guide d'utilisation -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6><i class="fas fa-question-circle me-1"></i>Guide d'utilisation</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6><i class="fas fa-1 me-1"></i>Choisissez votre fichier</h6>
+                            <p class="small">Sélectionnez un fichier CSV, Excel ou JSON contenant vos données.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><i class="fas fa-2 me-1"></i>Configurez les métadonnées</h6>
+                            <p class="small">Donnez un nom descriptif et ajoutez une description si nécessaire.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><i class="fas fa-3 me-1"></i>Uploadez et analysez</h6>
+                            <p class="small">Une fois uploadé, vous pourrez créer des analyses sur vos données.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    const submitBtn = document.getElementById('submitBtn');
+    const progressBar = document.getElementById('uploadProgress');
+    
+    // Désactiver le bouton et afficher la progression
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Upload en cours...';
+    progressBar.style.display = 'block';
+    
+    // Simulation de progression (à remplacer par une vraie barre de progression avec AJAX)
+    let progress = 0;
+    const interval = setInterval(function() {
+        progress += 10;
+        document.querySelector('.progress-bar').style.width = progress + '%';
+        
+        if (progress >= 90) {
+            clearInterval(interval);
+        }
+    }, 200);
+});
+
+// Auto-détection du type de fichier
+document.getElementById('{{ form.file_path.id_for_label }}').addEventListener('change', function() {
+    const filename = this.files[0]?.name || '';
+    const extension = filename.split('.').pop().toLowerCase();
+    const typeSelect = document.getElementById('{{ form.dataset_type.id_for_label }}');
+    
+    if (extension === 'csv') {
+        typeSelect.value = 'csv';
+    } else if (extension === 'xlsx' || extension === 'xls') {
+        typeSelect.value = 'excel';
+    } else if (extension === 'json') {
+        typeSelect.value = 'json';
+    }
+});
+</script>
+{% endblock %}

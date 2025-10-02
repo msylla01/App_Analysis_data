@@ -1,0 +1,234 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Dashboard - Assistant Analytique Génie{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Tableau de bord
+            </h1>
+            <p class="text-muted">Bienvenue, {{ user.username }} ! Voici un aperçu de votre activité.</p>
+        </div>
+    </div>
+    
+    <!-- Statistiques principales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ datasets_count }}</h4>
+                            <p class="mb-0">Datasets</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-database fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="/datasets/" class="text-white text-decoration-none">
+                        <small>Voir tous <i class="fas fa-arrow-right"></i></small>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ analyses_count }}</h4>
+                            <p class="mb-0">Analyses</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="/analyses/" class="text-white text-decoration-none">
+                        <small>Voir toutes <i class="fas fa-arrow-right"></i></small>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ visualizations_count }}</h4>
+                            <p class="mb-0">Visualisations</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-pie fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="/visualizations/" class="text-white text-decoration-none">
+                        <small>Voir toutes <i class="fas fa-arrow-right"></i></small>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ completed_analyses }}</h4>
+                            <p class="mb-0">Terminées</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <small>{{ running_analyses }} en cours, {{ failed_analyses }} échouées</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenu récent -->
+    <div class="row">
+        <!-- Datasets récents -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-database me-2"></i>Datasets récents</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_datasets %}
+                        {% for dataset in recent_datasets %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <a href="/datasets/{{ dataset.pk }}/" class="text-decoration-none">
+                                        {{ dataset.name|truncatechars:25 }}
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">{{ dataset.created_at|date:"d/m/Y" }}</small>
+                                </div>
+                                <span class="badge bg-primary">{{ dataset.get_dataset_type_display }}</span>
+                            </div>
+                            {% if not forloop.last %}<hr class="my-2">{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Aucun dataset</p>
+                        <a href="/api/upload/upload/" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Créer le premier
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analyses récentes -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-line me-2"></i>Analyses récentes</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_analyses %}
+                        {% for analysis in recent_analyses %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <a href="/analyses/{{ analysis.pk }}/" class="text-decoration-none">
+                                        {{ analysis.title|truncatechars:25 }}
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">{{ analysis.created_at|date:"d/m/Y" }}</small>
+                                </div>
+                                <span class="badge bg-{% if analysis.status == 'completed' %}success{% elif analysis.status == 'failed' %}danger{% elif analysis.status == 'running' %}warning{% else %}secondary{% endif %}">
+                                    {{ analysis.get_status_display }}
+                                </span>
+                            </div>
+                            {% if not forloop.last %}<hr class="my-2">{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Aucune analyse</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Visualisations récentes -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-pie me-2"></i>Visualisations récentes</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_visualizations %}
+                        {% for viz in recent_visualizations %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <a href="/visualizations/{{ viz.pk }}/" class="text-decoration-none">
+                                        {{ viz.title|truncatechars:25 }}
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">{{ viz.created_at|date:"d/m/Y" }}</small>
+                                </div>
+                                <span class="badge bg-info">{{ viz.get_chart_type_display }}</span>
+                            </div>
+                            {% if not forloop.last %}<hr class="my-2">{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Aucune visualisation</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions rapides -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-bolt me-2"></i>Actions rapides</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="/api/upload/upload/" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-upload d-block mb-2"></i>
+                                Uploader un dataset
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/datasets/" class="btn btn-outline-success w-100 mb-2">
+                                <i class="fas fa-chart-line d-block mb-2"></i>
+                                Créer une analyse
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/visualizations/" class="btn btn-outline-info w-100 mb-2">
+                                <i class="fas fa-chart-pie d-block mb-2"></i>
+                                Voir visualisations
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/api/auth/profile/" class="btn btn-outline-warning w-100 mb-2">
+                                <i class="fas fa-user d-block mb-2"></i>
+                                Mon profil
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

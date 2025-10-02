@@ -1,0 +1,47 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Supprimer l'analyse - {{ analysis.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4><i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Attention !</strong> Cette action est irréversible.
+                    </div>
+                    
+                    <p>Êtes-vous sûr de vouloir supprimer l'analyse suivante ?</p>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>{{ analysis.title }}</h6>
+                            <p class="text-muted">{{ analysis.description|default:"Aucune description" }}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-database me-1"></i>Dataset : {{ analysis.dataset.name }}<br>
+                                <i class="fas fa-calendar me-1"></i>Créée le : {{ analysis.created_at|date:"d/m/Y H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="/analyses/{{ analysis.pk }}/" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Supprimer définitivement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

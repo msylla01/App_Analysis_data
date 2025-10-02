@@ -51,8 +51,9 @@ Un assistant d'analyse de données moderne et interactif développé avec Django
 git clone https://github.com/msylla01/App_Analysis_data.git
 cd App_Analysis_data
 
-### 2. Créer un environnement virtuel
 
+### 2. Créer un environnement virtuel
+```bash
 # Avec venv
 python -m venv venv_django
 

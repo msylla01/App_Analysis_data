@@ -123,3 +123,57 @@ Démarrer le serveur de développement
 python manage.py runserver
 
 L'application sera accessible à l'adresse : http://127.0.0.1:8000/
+
+
+
+🎯 Utilisation
+
+    Upload Dataset : Glissez-déposez CSV/Excel sur /api/upload/upload/
+    Analyser : Choisissez type d'analyse (descriptive/corrélation/régression)
+    Visualiser : Graphiques auto-générés accessibles sur /visualizations/
+    Exporter : PNG, SVG, JSON disponibles
+
+📁 Structure
+
+assistant_analytique_django/
+├── analytics/              # App principale (modèles, vues, services)
+├── users/                  # Gestion utilisateurs
+├── upload/                 # Gestion uploads
+├── templates/              # Templates HTML
+├── static/                 # Fichiers statiques
+├── media/                  # Fichiers uploadés
+└── requirements.txt        # Dépendances
+
+
+DEBUG=True/False
+SECRET_KEY=votre-clé-django
+DATABASE_URL=postgresql://user:pass@host:port/db
+ALLOWED_HOSTS=localhost,127.0.0.1
+EMAIL_HOST=smtp.gmail.com (optionnel)
+REDIS_URL=redis://localhost:6379/0 (optionnel)
+
+
+# Erreur DB
+python manage.py dbshell
+
+# Reset migrations
+python manage.py migrate --fake-initial
+
+# Vérifier visualisations
+python manage.py shell
+>>> from analytics.models import Visualization
+>>> Visualization.objects.count()
+
+
+ Contribution
+
+    Fork le projet
+    Créez branche feature (git checkout -b feature/AmazingFeature)
+    Commit (git commit -m 'Add AmazingFeature')
+    Push (git push origin feature/AmazingFeature)
+    Pull Request
+
+
+🙏 Remerciements
+
+Django • Chart.js • Bootstrap • Pandas • PostgreSQL
